@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "./app/tristero.hs"
+      component: "tristero:exe:tristero"
+    - path: "./src"
+      component: "tristero:lib"
+    - path: "./test/tristero.hs"
+      component: "tristero:test:tristero"
