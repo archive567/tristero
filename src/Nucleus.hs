@@ -28,8 +28,6 @@ import Data.Distributive
 
 {-
 
-https://www.youtube.com/watch?v=xZmPuz9m2t0
-
 Take a Profunctor and split it into three:
 
 - the incoming contravariant input,
@@ -63,20 +61,9 @@ file:///Users/tonyday/Downloads/2004.07353.pdf
 
 coKleisli arrows of comonads
 
-In Haskell, every monad is strong in the sense that carries an additional operation, known as strength, with additional coherence properties. This happens
-because the extension operations of Haskell monads are necessarily internal.
-
-
 -}
 
-mstrength :: Monad t => t a -> b -> t (a, b)
-mstrength c b = c >>= \a -> pure (a, b)
 
--- f r → r is an f-algebra, r → f r an f-coalgebra
-newtype Mu f = Mu { foldMu :: forall r . (f r -> r) -> r }
-
-unfoldMu :: Functor f => (r -> f r) -> r -> Mu f
-unfoldMu g r = Mu $ \ f -> let h = f . fmap h . g in h r
 
 newtype Algebra f a = Algebra { unalgebra :: f a -> a}
 
@@ -94,9 +81,6 @@ data Pro f g a b = Pro
     nat :: f ~> g
   }
 
-(&) :: (a -> b) -> (b -> c) -> a -> c
-(&) = flip (.)
-
 makePro :: a ⊣ f -> f ~> g -> g ⊢ a -> a -> a
 makePro i nat o a = (unalgebra o) (nat ((uncoalgebra i) a))
 
@@ -110,10 +94,6 @@ makePro i nat o a = (unalgebra o) (nat ((uncoalgebra i) a))
 -- file:///Users/tonyday/Downloads/2004.07353.pdf
 -- https://hackage.haskell.org/package/type-operators-0.2.0.0/docs/Control-Type-Operator.html
 -- https://doisinkidney.com/pdfs/algebras-for-weighted-search.pdf
-
-
-
-
 
 -- | Contra and Covar are dual to each other in what way?
 --
