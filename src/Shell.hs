@@ -17,7 +17,7 @@
 
 {-* The Shell around a profunctor -}
 
-module Ephemeral.Shell where
+module Shell where
 
 import Prelude
 import Control.Monad
@@ -115,8 +115,11 @@ dotA (Shell c e) (Shell c' e') = closeA (Shell c' e) $> Shell c e'
 dotI :: (Functor g) => Shell Identity g a b -> Shell Identity g b c -> g (Shell Identity g a c)
 dotI (Shell c e) (Shell c' e') = closeI (Shell c' e) $> Shell c e'
 
-
-
-
-
-
+-- join :: M (N (M (N a))) → M (N a)
+--
+-- prod :: N (M (N a)) → M (N a)
+-- prod :: Maybe (m (Maybe a)) -> m (Maybe a)
+--
+-- dorp :: M (N (M a)) → M (N a)
+--
+-- swap :: N (M a) → M (N a)
