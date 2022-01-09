@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Nucleus
   (
@@ -19,12 +20,10 @@ import Data.Functor.Identity
 import Data.String
 import Data.Bool
 import Data.Functor
-import Yaya.Functor
 import Data.Functor.Compose
-import Data.Distributive
 import Control.Monad.Trans.Maybe
 import Data.Maybe
-import Data.Distributive
+import Data.HKD
 
 {-
 
@@ -50,20 +49,7 @@ A nucleus can be composed between two profuctors, but we tend to modify the nucl
 
 Calling a natural transformation a nucleus then reduces the visibility that a natural transformation is also what is outside profunctors allowing them to compose and computations to close.
 
-monads over posets are called closure operators
-comonads over posets are the interior operators
-the (Kleisli) cofree coalgebra construction
-
-the (EilenbergMoore) algebra construction EM : Mnd −→ Adj (and the coalgebra construction EC : Cmn −→ Adj
-that is not displayed) captures the final resolutions of monads (resp. comonads)
-
-file:///Users/tonyday/Downloads/2004.07353.pdf
-
-coKleisli arrows of comonads
-
 -}
-
-
 
 newtype Algebra f a = Algebra { unalgebra :: f a -> a}
 
@@ -73,7 +59,7 @@ type a ⊣ f = Coalgebra f a
 
 type f ⊢ a = Algebra f a
 
-type f ~> g = forall x. f x -> g x
+-- type f ~> g = forall x. f x -> g x
 
 data Pro f g a b = Pro
   { i :: Coalgebra f a,
@@ -82,7 +68,7 @@ data Pro f g a b = Pro
   }
 
 makePro :: a ⊣ f -> f ~> g -> g ⊢ a -> a -> a
-makePro i nat o a = (unalgebra o) (nat ((uncoalgebra i) a))
+makePro i nat o a = unalgebra o (nat (uncoalgebra i a))
 
 -- type Pro' a ⊣ f ~> g ⊢ b = Pro f g a b
 
@@ -101,18 +87,26 @@ makePro i nat o a = (unalgebra o) (nat ((uncoalgebra i) a))
 -- f b is extra context
 --
 -- TODO: use a -> f a
-newtype Contra a f b = Contra { uncontra :: a -> f b }
+newtype Contra f a b = Contra { uncontra :: a -> f b }
 
-instance HFunctor (Contra a) where
-  hmap nat (Contra f) = Contra $ nat . f
+{-
+
+instance FFunctor (Contra f a) where
+  ffmap nat (Contra f) = Contra $ nat . f
+-}
 
 newtype Covar g c = Covar { uncovar :: g c }
 
-instance HFunctor Covar where
-  hmap nat (Covar e) = Covar (nat e)
+{-
+instance FFunctor Covar where
+  ffmap nat (Covar e) = Covar (nat e)
+-}
 
-instance HFunctor Coalgebra where
-  hmap nat (Coalgebra f) = Coalgebra $ nat . f
+{-
+
+instance FFunctor Coalgebra where
+  ffmap nat (Coalgebra f) = Coalgebra $ nat . f
+-}
 
 data ProF f g a b = ProF
   { coalgP :: Coalgebra f a,
@@ -124,6 +118,8 @@ data ProF f g a b = ProF
 --
 --
 --
+
+
 data Shell f g a b c = Shell
   { contra :: Contra a f b,
     covar :: Covar g c
@@ -134,13 +130,20 @@ data Shell' f g a b = Shell'
     covar' :: Covar g b
   }
 
--- | 2 adjoints walk into a bar. I'll have what we're having, and the same for my buddy. Coming right up.
-hmap2 :: f ~> f' -> g ~> g' -> Shell f g a b c -> Shell f' g' a b c
-hmap2 natf natg (Shell i o) = Shell (hmap natf i) (hmap natg o)
+newtype Comm f a b = Comm { comm :: a -> f b }
+newtype Em g b c = Em { em :: g (Either c b)}
+data Sh f g a c = forall b. Sh
+  { c' :: Comm f a b,
+    e' :: Em g b c
+  }
 
 -- | 2 adjoints walk into a bar. I'll have what we're having, and the same for my buddy. Coming right up.
-hmap2' :: f ~> f' -> g ~> g' -> Shell' f g a b -> Shell' f' g' a b
-hmap2' natf natg (Shell' i o) = Shell' (hmap natf i) (hmap natg o)
+-- hmap2 :: f ~> f' -> g ~> g' -> Shell f g a b c -> Shell f' g' a b c
+-- hmap2 natf natg (Shell i o) = Shell (hmap natf i) (hmap natg o)
+
+-- | 2 adjoints walk into a bar. I'll have what we're having, and the same for my buddy. Coming right up.
+-- hmap2' :: f ~> f' -> g ~> g' -> Shell' f g a b -> Shell' f' g' a b
+-- hmap2' natf natg (Shell' i o) = Shell' (hmap natf i) (hmap natg o)
 
 -- | Mapping a notion of Contra failure (as a functor across the nucleus)
 --
@@ -149,30 +152,73 @@ type Box f g a b = Shell f (Compose Maybe g) a Bool b
 
 type Box' f g a b = Shell' f (Compose Maybe g) a b
 
-hmapBox :: f ~> f' -> g ~> g' -> Box f g a c -> Box f' g' a c
-hmapBox natf natg (Shell i o) = Shell (hmap natf i) (hmap (hmap natg) o)
+-- hmapBox :: f ~> f' -> g ~> g' -> Box f g a c -> Box f' g' a c
+-- hmapBox natf natg (Shell i o) = Shell (hmap natf i) (hmap (hmap natg) o)
 
-hmapBox' :: f ~> f' -> g ~> g' -> Box' f g a c -> Box' f' g' a c
-hmapBox' natf natg (Shell' i o) = Shell' (hmap natf i) (hmap (hmap natg) o)
+-- hmapBox' :: f ~> f' -> g ~> g' -> Box' f g a c -> Box' f' g' a c
+-- hmapBox' natf natg (Shell' i o) = Shell' (hmap natf i) (hmap (hmap natg) o)
 
 -- * closures
-close2 :: Functor g => Shell f g a b a -> g (f b)
-close2 (Shell (Contra contra) (Covar covar)) = fmap contra covar
+-- close2 :: Functor g => Shell f g a b a -> g (f b)
+-- close2 (Shell (Contra contra) (Covar covar)) = fmap contra covar
 
 close2' :: Functor g => Shell' f g a a -> g (f a)
 close2' (Shell' (Coalgebra contra) (Covar covar)) = fmap contra covar
 
-close_ :: Functor g => Shell f g a x a -> g ()
-close_ (Shell (Contra contra) (Covar covar)) = void $ fmap contra covar
+-- close_ :: Functor g => Shell f g a x a -> g ()
+-- close_ (Shell (Contra contra) (Covar covar)) = void $ fmap contra covar
 
-closeA :: (Applicative f, Functor g) =>
-     Shell f g a Bool (Maybe a) -> g (f Bool)
-closeA (Shell (Contra contra) (Covar covar)) =
-  fmap (maybe (pure False) contra) covar
+-- closeA :: (Applicative f, Functor g) =>
+--      Shell f g a Bool (Maybe a) -> g (f Bool)
+-- closeA (Shell (Contra contra) (Covar covar)) =
+--   fmap (maybe (pure False) contra) covar
 
 closeA' :: (Applicative g) => Shell' f (Compose Maybe g) a b -> g (Maybe b)
 closeA' (Shell' (Coalgebra _) (Covar covar)) =
   maybe (pure Nothing) (fmap Just) $ getCompose covar
+
+{-
+
+-- | Connect an emitter directly to a committer of the same type.
+--
+-- The monadic action returns when the committer finishes.
+closeM :: (Monad m) => Shell m m a a -> m ()
+closeM (Shell c e) = go
+  where
+    go = do
+      a <- emit e
+      c' <- maybe (pure False) (commit c) a
+      when c' go
+
+closeA :: (Applicative f, Functor g) => Shell f g a a -> g (f Bool)
+closeA (Shell c e) = fmap (maybe (pure False) (commit c)) (emit e)
+
+closeI :: Functor g => Shell Identity g a a -> g Bool
+closeI (Shell c e) = fmap (runIdentity . maybe (Identity False) (commit c)) (emit e)
+
+-- * composition
+
+-- | composition of monadic shells
+dotM :: (Monad m) => Shell m m a b -> Shell m m b c -> m (Shell m m a c)
+dotM (Shell c e) (Shell c' e') = closeM (Shell c' e) $> Shell c e'
+
+-- | composition of applicative boxes
+dotA :: (Applicative f, Functor g) => Shell f g a b -> Shell f g b c -> g (Shell f g a c)
+dotA (Shell c e) (Shell c' e') = closeA (Shell c' e) $> Shell c e'
+
+-- |
+dotI :: (Functor g) => Shell Identity g a b -> Shell Identity g b c -> g (Shell Identity g a c)
+dotI (Shell c e) (Shell c' e') = closeI (Shell c' e) $> Shell c e'
+
+-}
+-- join :: M (N (M (N a))) → M (N a)
+--
+-- prod :: N (M (N a)) → M (N a)
+-- prod :: Maybe (m (Maybe a)) -> m (Maybe a)
+--
+-- dorp :: M (N (M a)) → M (N a)
+--
+-- swap :: N (M a) → M (N a)
 
 {-
 instance Distributive Maybe
@@ -184,6 +230,7 @@ instance Distributive Maybe
 distribMaybe :: (Applicative f) => Compose Maybe f a -> Compose f Maybe a
 distribMaybe = Compose . maybe (pure Nothing) (fmap Just) . getCompose
 
+{-
 -- * looping
 loopM :: Monad g => Shell g g a Bool (Maybe a) -> g ()
 loopM s@(Shell (Contra contra) (Covar covar)) =
@@ -194,9 +241,11 @@ loopM s@(Shell (Contra contra) (Covar covar)) =
       c' <- maybe (pure False) contra a
       bool (go s') (pure ()) c'
 
-evalB :: Shell Identity Identity a b a -> b
-evalB (Shell (Contra contra) (Covar covar)) =
-  runIdentity $ runIdentity $ fmap contra covar
+-}
+
+--evalB :: Shell Identity Identity a b a -> b
+--evalB (Shell (Contra contra) (Covar covar)) =
+--  runIdentity $ runIdentity $ fmap contra covar
 
 {-
 -- | composition of monadic shells
@@ -232,5 +281,3 @@ dotI (Shell contra covar) (Shell contra' covar') =
 
 -}
 
--- * CPS
--- https://github.com/robrix/focalized/blob/cc18df3aa6aec8d61b1d71a896a43ae598db2cbe/src/Focalized/Calculus.hs#L892-L973

@@ -9,6 +9,8 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Tristero
   ( Thing,
@@ -16,6 +18,7 @@ module Tristero
     AdapterP,
     LensP,
     PrismP,
+    TraversalP,
 
     Adapter (..),
     type (::~>),
@@ -29,6 +32,9 @@ import Data.Profunctor
 import Data.Bifunctor
 import Data.Function
 import Data.Profunctor.Monoidal
+import Control.Applicative
+import Data.Functor.Contravariant
+import Control.Monad
 
 -- * The Thing heirarchy
 
@@ -130,7 +136,7 @@ instance Monoidal (Traversal a b) where
 -- | an alternative to Star worth comparing.
 newtype UpStar f a b = UpStar { unUpStar:: a -> f b } deriving (Functor)
 
-instance (Functor f) => Costrong (UpStar f) where
+-- instance (Functor f) => Costrong (UpStar f) where
 
 instance Functor f ⇒ Profunctor (UpStar f) where
   dimap f g (UpStar h) = UpStar (fmap g . h . f)
@@ -156,5 +162,5 @@ instance Applicative f ⇒ Monoidal (UpStar f) where
 pair :: Applicative f ⇒ (a → f b) → (c → f d) → (a,c) → f (b, d)
 pair h k (x, y) = (,) <$> h x <*> k y
 
-traverseOf :: Traversal a b s t -> (∀ f. Applicative f ⇒ (a -> f b) -> s -> f t)
-traverseOf p f = undefined -- runStar (p (Star f))
+-- traverseOf :: Traversal a b s t -> (∀ f. Applicative f ⇒ (a -> f b) -> s -> f t)
+-- traverseOf p f = undefined -- runStar (p (Star f))
