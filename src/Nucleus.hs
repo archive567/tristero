@@ -24,6 +24,11 @@ import Data.Functor.Compose
 import Control.Monad.Trans.Maybe
 import Data.Maybe
 import Data.HKD
+import Data.Bifunctor.Flip
+
+newtype Nucleus p b = Nucleus (forall a. Nucleus (Flip p) a -> p a b)
+
+newtype Hyper p a b = Hyper (Hyper (Flip p) a b -> p a b)
 
 {-
 

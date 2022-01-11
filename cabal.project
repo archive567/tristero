@@ -1,8 +1,4 @@
 packages: tristero.cabal
-          ../kan-extensions/kan-extensions.cabal
-          ../semigroupoids/semigroupoids.cabal
-          ../free/free.cabal
-          ../adjunctions/adjunctions.cabal
 
 allow-newer:
   constraints-extras:constraints,
@@ -66,5 +62,27 @@ source-repository-package
   branch: main
   location: https://github.com/ekmett/numeric-fin.git
 
--- Might be helpful when Hackage doesn't build properly...
--- keep-going: True
+source-repository-package
+  type: git
+  tag: 8d40b0b7aa6bdd66a8ccaf4a3212b0e214af804b
+  location: https://github.com/tonyday567/free.git
+
+source-repository-package
+  type: git
+  tag: c1b9f5a87ab558a37b4a104278d8ec549f9e1047
+  location: https://github.com/tonyday567/semigroupoids.git
+
+source-repository-package
+  type: git
+  tag: 91358fc6ddf753e198a8d8aa61e9bef83cc7572e
+  location: https://github.com/tonyday567/adjunctions.git
+
+source-repository-package
+  type: git
+  tag: f48a7880ac2cb01436d359f211084dff6e6aba50
+  location: https://github.com/tonyday567/kan-extensions.git
+
+source-repository-package
+  type: git
+  tag: 28d543a0173ad5a32d48141202b6ff0f7af23378
+  location: https://github.com/tonyday567/hyperfunctions.git

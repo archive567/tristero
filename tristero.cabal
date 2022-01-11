@@ -23,6 +23,8 @@ common common-options
     distributive >= 1,
     transformers >=0.5.6,
     hkd,
+    bifunctors,
+    hyperfunctions,
   default-language:
     Haskell2010
 

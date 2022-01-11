@@ -25,6 +25,7 @@ import Prelude
 import Data.Profunctor
 import Control.Applicative
 import Data.Functor.Contravariant
+import Control.Monad.Hyper
 
 -- data Box f g a b = Box { commit :: b -> g Bool, emit :: f (Maybe a) } deriving (Generic)
 
