@@ -25,7 +25,7 @@ import Prelude
 import Data.Profunctor
 import Control.Applicative
 import Data.Functor.Contravariant
-import Control.Monad.Hyper
+-- import Control.Monad.Hyper
 
 -- data Box f g a b = Box { commit :: b -> g Bool, emit :: f (Maybe a) } deriving (Generic)
 
@@ -39,13 +39,21 @@ newtype Emitter f a = Emitter { emit :: f a }
 instance (Functor f) => Functor (Emitter f) where
   fmap f (Emitter a) = Emitter (fmap f a)
 
-data Box f g b a = (Alternative f, Alternative g) => Box { committer :: Committer g b, emitter :: Emitter f a }
+data Box f g b a =
+  Box { committer :: Committer g b, emitter :: Emitter f a }
 
-instance Functor (Box f g b) where
+instance (Functor f) => Functor (Box f g b) where
   fmap f (Box c e) = Box c (fmap f e)
 
-instance Profunctor (Box f g) where
+instance (Functor f, Contravariant g) => Profunctor (Box f g) where
   dimap f g (Box c e) = Box (contramap f c) (fmap g e)
+
+connect :: (Functor f) => Box f g a a -> f (g ())
+connect (Box c e) = commit c <$> emit e
+
+fromListE' :: (Applicative f, Alternative f) => [a] -> Emitter f a
+fromListE' [] = Emitter empty
+fromListE' (x:xs) = Emitter undefined
 
 fire :: (Alternative f) => Box f g a a -> f (g ())
 fire (Box c e) = commit c <$> emit e

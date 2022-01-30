@@ -48,4 +48,5 @@ library
   exposed-modules:
     Tristero,
     Box,
-    Nucleus
+    Nucleus,
+    Stream
