@@ -5,29 +5,41 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Box
-  ( Committer (..),
+  (
+    type (~>),
+    -- * comms in the type
+    Committer (..),
     Emitter (..),
     Box (..),
-    fire,
+    connect,
     glue,
-    toListE,
-    fromListE,
-    CommitterF (..),
-    EmitterF (..),
-    BoxF (..),
-    fromListEF,
-    fromListC,
-  ) where
+    nucleate,
 
-import Prelude
+    -- * more boxy
+    CommitterB,
+    EmitterB,
+    BoxB,
+
+    Nucleus(..),
+    Hyper (..),
+    HyperH,
+) where
+
+import Prelude hiding ((.), id)
 import Data.Profunctor
-import Control.Applicative
 import Data.Functor.Contravariant
--- import Control.Monad.Hyper
+import Data.Function ((&))
+import Control.Monad.Trans.Maybe
+import Data.Bifunctor.Flip
+import Data.Functor.Const
+import Control.Category
 
--- data Box f g a b = Box { commit :: b -> g Bool, emit :: f (Maybe a) } deriving (Generic)
+type f ~> g = forall a. f a -> g a
+
+-- i ⊣ f ~> g ⊢ o
 
 newtype Committer f a = Committer { commit :: a -> f () }
 
@@ -48,48 +60,35 @@ instance (Functor f) => Functor (Box f g b) where
 instance (Functor f, Contravariant g) => Profunctor (Box f g) where
   dimap f g (Box c e) = Box (contramap f c) (fmap g e)
 
-connect :: (Functor f) => Box f g a a -> f (g ())
-connect (Box c e) = commit c <$> emit e
+connect :: (f a -> b) -> Committer g b -> Emitter f a -> g ()
+connect w c e = emit e & w & commit c
 
-fromListE' :: (Applicative f, Alternative f) => [a] -> Emitter f a
-fromListE' [] = Emitter empty
-fromListE' (x:xs) = Emitter undefined
+glue :: Box f g (f a) a -> g ()
+glue (Box c e) = connect id c e
 
-fire :: (Alternative f) => Box f g a a -> f (g ())
-fire (Box c e) = commit c <$> emit e
+nucleate ::
+  Functor f =>
+  (f a -> f b) ->
+  Committer g b ->
+  Emitter f a ->
+  f (g ())
+nucleate n c e = emit e & n & fmap (commit c)
 
-glue :: (Alternative f, Alternative g) => Box f g a a -> f (g ())
-glue b = fmap (foldr const empty) (many (fire b))
+type CommitterB m a = Committer (MaybeT m) a
+type EmitterB m a = Emitter (MaybeT m) a
+type BoxB m b a = Box (MaybeT m) (MaybeT m) b a
 
-toListE :: (Alternative f) => Emitter f a -> f [a]
-toListE e = many (emit e)
+newtype Nucleus p b = Nucleus (forall a. Nucleus (Flip p) a -> p a b)
 
-fromListE :: (Traversable t, Alternative f) => t a -> Emitter f a
-fromListE xs = Emitter $ foldr (const . pure) empty xs
+newtype Hyper p a b = Hyper (Hyper (Flip p) a b -> p a b)
 
-newtype CommitterF f a = CommitterF { commitF :: a -> f Bool }
+type HyperH a b = Hyper (Flip Const) a b
 
-instance Contravariant (CommitterF f) where
-  contramap f (CommitterF a) = CommitterF (a . f)
+newtype a -&> b = Hyp ((b -&> a) -> b)
 
-newtype EmitterF f a = EmitterF { emitF :: f (Maybe a) }
+invoke :: (a -&> b) -> (b -&> a) -> b
+invoke (Hyp f) = f
 
-instance (Functor f) => Functor (EmitterF f) where
-  fmap f (EmitterF a) = EmitterF (fmap (fmap f) a)
-
-data BoxF f g b a = BoxF { committerF :: CommitterF g b, emitterF :: EmitterF f a }
-
-instance (Functor f) => Functor (BoxF f g b) where
-  fmap f (BoxF c e) = BoxF c (fmap f e)
-
-instance (Functor f) => Profunctor (BoxF f g) where
-  dimap f g (BoxF c e) = BoxF (contramap f c) (fmap g e)
-
-fromListEF :: (Traversable t, Applicative f, Applicative g) => t a -> Committer g a -> f ()
-fromListEF xs c =
-  foldr ((*>) . fmap (maybe (pure ()) (commit c)) . emit)
-  (pure ()) (Emitter . pure . Just <$> xs)
-
-fromListC :: (Traversable t, Applicative f) => t a -> Committer f a -> f ()
-fromListC xs c =
-  foldr ((*>) . commit c) (pure ()) xs
+instance Category (-&>) where
+  id = Hyp (`invoke` id)
+  f . g = Hyp (\k -> invoke f (g . k))
